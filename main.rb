@@ -89,10 +89,10 @@ module Homebrew
   # Do the livecheck stuff or not
   if livecheck.false?
     # Change cask name to full name
-    cask = tap + '/' + cask if !tap.blank? && !cask.blank?
+    cask_name = tap + '/' + cask if !tap.blank? && !cask.blank?
 
     # Get info about cask
-    stable = Cask[cask].stable
+    stable = Cask::CaskLoader::FromTapLoader.new(cask_name).load(config: nil)
     is_git = stable.downloader.is_a? GitDownloadStrategy
 
     # Prepare tag and url
@@ -124,9 +124,9 @@ module Homebrew
          cask
   else
     # Support multiple casks in input and change to full names if tap
-    unless cask.blank?
-      cask = cask.split(/[ ,\n]/).reject(&:blank?)
-      cask = cask.map { |f| tap + '/' + f } unless tap.blank?
+    unless cask_name.blank?
+      cask_name = cask_name.split(/[ ,\n]/).reject(&:blank?)
+      cask_name = cask_name.map { |f| tap + '/' + f } unless tap.blank?
     end
 
     # Get livecheck info
@@ -136,8 +136,8 @@ module Homebrew
                      '--newer-only',
                      '--full-name',
                      '--json',
-                     *("--tap=#{tap}" if !tap.blank? && cask.blank?),
-                     *(cask unless cask.blank?)
+                     *("--tap=#{tap}" if !tap.blank? && cask_name.blank?),
+                     *(cask_name unless cask_name.blank?)
     json = JSON.parse json
 
     # Define error
@@ -149,7 +149,7 @@ module Homebrew
       next unless info['version']
 
       # Get info about cask
-      cask = info['cask']
+      cask_name = info['cask']
       version = info['version']['latest']
 
       begin
@@ -162,7 +162,7 @@ module Homebrew
              *("--fork-org=#{org}" unless org.blank?),
              *('--force' unless force.false?),
              *('--dry-run' unless dryrun.false?),
-             cask
+             cask_name
       rescue ErrorDuringExecution => e
         # Continue execution on error, but save the exeception
         err = e
